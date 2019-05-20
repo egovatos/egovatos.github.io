@@ -1,0 +1,91 @@
+---
+title: "Using Steamdb to Find Trends in PC Gaming"
+subtitle: CMSC320 - Final Project
+author: Eric Govatos, UID 115712973
+date: "`r format(Sys.time(), '%d %B %Y')`"
+bibliography: EGovatos_Final_Bib.bib
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+---
+
+# Tutorial Overview
+
+In this tutorial, we will attempt to answer the question: can we predict the genre of the next top PC game by scraping Steamdb's top 100 games list and examine the trends among the games? 
+
+We will go over what Steam is, why it is important, useful websites we can use to gather data from Steam itself, and how we can use the data to investigate trends and find what sort of games developers should be developing to help increase their revenue in an increasingly competitive market. 
+
+For this tutorial, we will use the R programming language. All code is provided to help you build the same data set.
+
+### What is Steam?
+
+Steam is the largest digital retailer of PC, Mac, and Linux games. Users can purchase games from the digital website, as well as download a standalone version of the application to their desktops so they can download and install games, communincate and play games with their friends, share screenshots, and more. 
+
+For developers, it also has become a haven. In 2017, Steam opened up its doors to any developer, allowing them to upload their game to the platform for a small fee of $100. Since the platform has over 14 million concurrent players every single day [@steam2019], developers have huge, unprecedent access to customers more so than ever before in the video game industry.
+
+### Motivation
+
+With this incredible access that both customers and developes have, it also means that there has been a huge influx of games on the platform that often go unnoticed or hardly generate any revenue With so many games to choose from and revenue down, developers need to make careful choices about how they developer their games, and take insights into account such as genres, trends among games, and so forth. 
+
+Steam itself is hard to gather data from - the website and data is very broken up. Luckily, we can scrape data we want from https://steamdb.info/ [@steamdb], a website that gathers information from Steam about the video games on the platform. 
+
+# Data Scraping
+
+We will start by scraping and tidying the data from Steamdb. 
+
+### Data Sources and Information
+
+There are multiple pages we can scrape to gather information from:
+
+* https://steamdb.info/graph/
+    + Games with the most concurrent players.
+* https://steamdb.info/twitch/
+    + Top games played by Twitch Streamers (https://twitch.tv/ is a popular website where players can live stream themselves playing video games)
+* https://steamdb.info/stats/gameratings/
+    + Games with the highest reviews on Steam. Steam reviews are simple - either "Recommended" or "Not Recommended". This page lists the number of both.
+    
+In addition to these graphs, each game has an "AppId". We can access the Steam store page of any AppId by appending to the end of this URL: https://store.steampowered.com/app/
+
+### Using R to Scrape Data
+
+We will use R to scrape the data from these pages.
+
+```{r, output=FALSE, message=FALSE}
+# Lets include the libraries well need here. 
+library(tidyverse)
+library(rvest)
+
+# Make a variable for our URL to the table. The database isn't available online - we'll have to scrape it off of the website.
+steam_db_url <- "https://steamdb.info/graph/"
+
+# We need to get the ID of the table on the website. We have to do this manually by viewing the page source. The table ID is "gamesbygenre".
+# We can use the table ID to scrape the specific table.
+
+steam_db_table <- steam_db_url %>%
+  read_html() %>%
+  html_nodes("table") %>%
+  html_table(fill=TRUE)
+
+steam_db_table <- steam_db_table[[1]]
+
+# Rename the columns of the table.
+steam_db_table <- steam_db_table %>%
+  magrittr::set_colnames(., c("rank", "appId", 
+                              "name", "currentPlayers", "24hrPeak", 
+                              "maxConcurrentPlayers")) %>%
+  # Make it a tibble.
+  as_tibble()
+
+# remove the first row to clean up data (unneeded)
+
+steam_db_table = steam_db_table[-1,]
+
+# Output for Step 1.
+steam_db_table
+
+
+```
+
+# References
