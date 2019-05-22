@@ -560,7 +560,7 @@ steam_db_final_top500 %>%
   geom_smooth(method = lm) +
   labs(title="Price of Popular Games Over the Last Decade",
          x = "Release Date",
-         y = "Price") +
+         y = "Price in USD") +
   geom_text_repel(aes(label=ifelse(price>=60,as.character(name),'')), size = 3, nudge_x = 10, segment.alpha = 0.2) +
   theme(legend.position="none")
 ```
