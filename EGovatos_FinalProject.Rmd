@@ -2,18 +2,19 @@
 title: "Using Steamdb to Find Trends in PC Gaming"
 subtitle: CMSC320 - Final Project
 author: Eric Govatos, UID 115712973
-date: "`r format(Sys.time(), '%d %B %Y')`"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
 bibliography: EGovatos_Final_Bib.bib
 output:
   html_document:
     toc: true
+    theme: yeti
     toc_float:
-      collapsed: false
+      toc_collapsed: false
 ---
 
 # Tutorial Overview
 
-In this tutorial, we will attempt to answer the question: can we predict the genre of the next top PC game by scraping Steamdb's top 100 games list and examine the trends among the games? 
+In this tutorial, we will investigate trends in the ever competing market that is the PC video gaming industry. We will explore and analyze these trends to help developers find avenues in which they can increase the success of their upcoming video game titles.
 
 We will go over what Steam is, why it is important, useful websites we can use to gather data from Steam itself, and how we can use the data to investigate trends and find what sort of games developers should be developing to help increase their revenue in an increasingly competitive market. 
 
@@ -21,15 +22,15 @@ For this tutorial, we will use the R programming language. All code is provided 
 
 ### What is Steam?
 
-Steam is the largest digital retailer of PC, Mac, and Linux games. Users can purchase games from the digital website, as well as download a standalone version of the application to their desktops so they can download and install games, communincate and play games with their friends, share screenshots, and more. 
+Steam (https://store.steampowered.com/) is the largest digital retailer of PC, Mac, and Linux games. Users can purchase games from the digital website, as well as download a standalone version of the application to their desktops so they can download and install games, communincate and play games with their friends, share screenshots, and more. 
 
 For developers, it also has become a haven. In 2017, Steam opened up its doors to any developer, allowing them to upload their game to the platform for a small fee of $100. Since the platform has over 14 million concurrent players every single day [@steam2019], developers have huge, unprecedent access to customers more so than ever before in the video game industry.
 
 ### Motivation
 
-With this incredible access that both customers and developes have, it also means that there has been a huge influx of games on the platform that often go unnoticed or hardly generate any revenue With so many games to choose from and revenue down, developers need to make careful choices about how they developer their games, and take insights into account such as genres, trends among games, and so forth. 
+With this incredible access that both customers and developes have, it also means that there has been a huge influx of games on the platform that often go unnoticed or hardly generate any revenue. With so many games to choose from and revenue decreasing on average [@mikerose2018], developers need to make careful choices about how they developer their games, and take insights into account such as genres, trends among games, and so forth. 
 
-Steam itself is hard to gather data from - the website and data is very broken up. Luckily, we can scrape data we want from https://steamdb.info/ [@steamdb], a website that gathers information from Steam about the video games on the platform. 
+Luckily, we can scrape data we want from https://steamdb.info/ [@steamdb], a website that gathers information from Steam about the video games on the platform. We can also use Steam itself to find additional information.
 
 # Data Scraping
 
@@ -37,7 +38,7 @@ We will start by scraping and tidying the data from Steamdb.
 
 ### Data Sources and Information
 
-There are multiple pages we can scrape to gather information from:
+There are multiple pages we can scrape to gather information from on Steamdb:
 
 * https://steamdb.info/graph/
     + Games with the most concurrent players.
@@ -45,47 +46,578 @@ There are multiple pages we can scrape to gather information from:
     + Top games played by Twitch Streamers (https://twitch.tv/ is a popular website where players can live stream themselves playing video games)
 * https://steamdb.info/stats/gameratings/
     + Games with the highest reviews on Steam. Steam reviews are simple - either "Recommended" or "Not Recommended". This page lists the number of both.
+* https://store.steampowered.com/app/
+    + In addition to the 3 other tables above, each game has an publicly facing "AppId". We can access the Steam store page of any AppId by appending to the end of this URL.
+    + The same information can be found via Steamdb again, by appending the AppId to the end of this URL: https://steamdb.info/app/. However, while Steamdb is useful, it can be quite messy in the organization of its information unlike the equivalent Steam store page.
     
-In addition to these graphs, each game has an "AppId". We can access the Steam store page of any AppId by appending to the end of this URL: https://store.steampowered.com/app/
+We will use all of these resources to scrape data and build a comprehensive set of data about video game titles on Steam that we can then use to explore different trends.
 
 ### Using R to Scrape Data
 
-We will use R to scrape the data from these pages.
+We will use R to scrape the data from these pages. We will use the same method to build 3 different tables from the sources above, then join them together. After that, we'll gather additional information for each AppId.
 
-```{r, output=FALSE, message=FALSE}
+If you're new to scraping data with R, do not worry. We'll step through the process and explain relevant information and code used.
+
+### Step 1: Concurrent Players Table
+
+We will begin by scraping the table of games with the most concurrent players.
+
+Each entity (row) is a video game, and we will collect attributes about each video game (variables in the columns).
+
+Some information about the attributes:
+
+* appId
+    + The AppId for each entity that we can use later to gather additional information on the title.
+* name
+    + The name of the video game/application.
+* currentPlayers
+    + The number of players currently playing the game at the time of data scraping.
+* 24hrPeakPlayers
+    + The number of max concurrent players during the last 24 hours.
+* maxConcurrentPlayers
+    + The maximum number of concurrent players the video game has ever experienced during its lifetime on Steam.
+
+Let's begin! The comments within the code block below will help move you along throught the setup and scraping process.
+
+```{r, output=FALSE, message=FALSE, warning=FALSE}
 # Lets include the libraries well need here. 
+
+# Tidyverse is a great library that helps with tidying/cleaning up our data, along with great general purpose functions in R.
 library(tidyverse)
+
+# RVest has functions we'll need for scraping.
 library(rvest)
 
 # Make a variable for our URL to the table. The database isn't available online - we'll have to scrape it off of the website.
 steam_db_url <- "https://steamdb.info/graph/"
 
-# We need to get the ID of the table on the website. We have to do this manually by viewing the page source. The table ID is "gamesbygenre".
-# We can use the table ID to scrape the specific table.
+# We need to get the ID of the table on the website. We have to do this manually by viewing the page source (browse to the page, right click -> view page source. We can browse the source code until we come across the table and find its name. In this case, the table ID is simply just "table".
 
-steam_db_table <- steam_db_url %>%
+# We'll assign the scraped values to a new data frame, "steam_db_table_graph". 
+steam_db_table_graph <- steam_db_url %>%
+  # read_html() will read in the html from the page.
   read_html() %>%
+  # html_nodes will select the relevant data we want be using the html selector.
   html_nodes("table") %>%
+  # Lastly this is an html table, so we can use this to more easily scrape the data into a dataframe.
   html_table(fill=TRUE)
 
-steam_db_table <- steam_db_table[[1]]
+# When we scrape the data, we may get multiple tables, but we only want the first one of the page.
+steam_db_table_graph <- steam_db_table_graph[[1]]
 
 # Rename the columns of the table.
-steam_db_table <- steam_db_table %>%
-  magrittr::set_colnames(., c("rank", "appId", 
-                              "name", "currentPlayers", "24hrPeak", 
+steam_db_table_graph <- steam_db_table_graph %>%
+  magrittr::set_colnames(., c("expand", "appId", 
+                              "name", "currentPlayers", "24hrPeakPlayers", 
                               "maxConcurrentPlayers")) %>%
   # Make it a tibble.
   as_tibble()
 
-# remove the first row to clean up data (unneeded)
+# Now, lets clean up the gathered data.
 
-steam_db_table = steam_db_table[-1,]
+# Remove the first two rows, as this just shows the concurrent players for the Steam platform itself, along with an "initalizing..." row. This is not the sort of data we want, we just want info on the games itself. 
+steam_db_table_graph<-steam_db_table_graph %>%
+  slice(3:n())
 
-# Output for Step 1.
-steam_db_table
+# Remove the "expand" column, as it is also useless information. We can use the select diplyr command to remove a specific column when using the '-' operator against the column name.
+steam_db_table_graph <- steam_db_table_graph %>% 
+  select(-"expand")
 
-
+# Output dataframe for Step 1.
+steam_db_table_graph
 ```
+
+Great! Now we have a completed dataframe of the videogames with the top concurrent players. Each row displays a videogame, along with the relevant attributes, such as appId, the current amount of players, peak number if players in the last 24 hours, and the max ever amount of concurrent players.
+
+### Step 2: Twitch Players Table
+
+Next, we'll scrape the table for top games played by top Twitch streamers.
+
+Again, each entity (row) is a video game.
+
+Some information about the attributes:
+
+* name
+    + The name of the video game/application.
+* currentViewers
+    + The number of players currently playing the game at the time of data scraping.
+* 24hrPeakViewers
+    + The number of viewers during the last 24 hours.
+* twitchSteamPlayers24hr
+    + The number of Twitch streamers streaming the game from Steam in the last 24 hours.
+    
+As above, here is the R code block 
+    
+```{r, output=FALSE, message=FALSE, warning=FALSE}
+# Change the URL to the twitch URL. 
+steam_db_url <- "https://steamdb.info/twitch/"
+
+# We need to get the ID of the table on the website. We have to do this manually by viewing the page source (browse to the page, right click -> view page source. We can browse the source code until we come across the table and find its name. In this case, the table ID is simply just "table".
+
+# We'll assign the scraped values to a new data frame, "steam_db_table_twitch". 
+steam_db_table_twitch <- steam_db_url %>%
+  read_html() %>%
+  html_nodes("table") %>%
+  html_table(fill=TRUE)
+
+# When we scrape the data, we may get multiple tables, but we only want the first one of the page.
+steam_db_table_twitch <- steam_db_table_twitch[[1]]
+
+# Rename the columns of the table.
+steam_db_table_twitch <- steam_db_table_twitch %>%
+  magrittr::set_colnames(., c( "name", "currentViewers", "24hrPeakViewers", 
+                              "twitchSteamPlayers24hr")) %>%
+  # Make it a tibble.
+  as_tibble()
+
+# Now, lets clean up the gathered data.
+
+# Remove the first row, as this just shows "Initializing table… You must have JavaScript enabled." Obviously, this not a valid entry.
+steam_db_table_twitch <- steam_db_table_twitch %>%
+  slice(2:n()) %>%
+# We also again, want to remove the entity "Steam", as this is the platform, and not an actual videogame.
+  subset(name!="Steam")
+
+# Remove the "expand" column, as it is also useless information. We can use the select diplyr command to remove a specific column when using the '-' operator against the column name.
+
+# Output dataframe for Step 1.
+steam_db_table_twitch
+```
+
+Before we move forward, there is something very important to notice with this data set already. Compared to the two other tables we create (concurrent players and reviews), this data frame has close to 12,000 entities, while the other two contain far less (concurrent players is roughly 1200, and reviews is only 138). We will modify the completed dataframe further on.
+
+### Step 3: Top Rated Games Table
+
+Next, we'll scrape the table for the reviews of each game.
+
+Each entity (row) is a video game.
+
+Some information about the attributes:
+
+* appId
+    + The AppId for each entity that we can use later to gather additional information on the title.
+* name
+    + The name of the video game/application.
+* currentViewers
+    + The number of players currently playing the game at the time of data scraping.
+* 24hrPeak
+    + The number of viewers during the last 24 hours.
+* twitchSteamPlayers24hr
+    + The number of Twitch streamers streaming the game from Steam in the last 24 hours.
+    
+Again, the code block:
+     
+```{r, output=FALSE, message=FALSE, warning=FALSE}
+# Change the URL to the reviews URL. 
+steam_db_url <- "https://steamdb.info/stats/gameratings/"
+
+# We need to get the ID of the table on the website. We have to do this manually by viewing the page source (browse to the page, right click -> view page source. We can browse the source code until we come across the table and find its name. In this case, the table ID is simply just "table".
+
+# We'll assign the scraped values to a new data frame, "steam_db_table_reviews". 
+steam_db_table_reviews <- steam_db_url %>%
+  read_html() %>%
+  html_nodes("table") %>%
+  html_table(fill=TRUE)
+
+# When we scrape the data, we may get multiple tables, but we only want the first one of the page.
+steam_db_table_reviews <- steam_db_table_reviews[[1]]
+
+# Rename the columns of the table.
+steam_db_table_reviews <- steam_db_table_reviews %>%
+  magrittr::set_colnames(., c( "rank", "appId", "name", "postiveReviews", "negativeReviews", 
+                              "reviewPercentage")) %>%
+  # Make it a tibble.
+  as_tibble()
+
+# Now, lets clean up the gathered data.
+
+# Remove the first row, as this just shows the headers of the table. Obviously, this not a valid entry.
+steam_db_table_reviews <- steam_db_table_reviews %>%
+  slice(2:n()) %>%
+# We also again, want to remove the entity "Steam", as this is the platform, and not an actual videogame.
+  subset(name!="Steam") %>%
+# Lets also remove the rank attribute. We dont need this, since we can just order the data ourselves by a given attribute later on.
+  select(-"rank")
+
+# Remove the "expand" column, as it is also useless information. We can use the select diplyr command to remove a specific column when using the '-' operator against the column name.
+
+# Output dataframe for Step 1.
+steam_db_table_reviews
+```
+
+We have now scraped the the three main tables from Steamdb! Now lets combine all of this data into one table.
+
+### Step 4: Join Data Tables, Preliminary Tidying 
+
+Now that we have gathered the data into three different data frames, we can now join the data into one larger combined data frame.
+
+We will do this by using the merge function. The third parameter of the merge function lets us merge on a common attribute. In this case, all three tables have the name of the video game title, so we'll merge using this attribute.
+
+```{r, output=FALSE, message=FALSE}
+# Merge the top table and review table, and assign to a new variable, "steam_db_final".
+steam_db_final <- merge(steam_db_table_graph, steam_db_table_reviews, by="name", all=TRUE)
+
+# Merge the final table with the last table, the twitch table.
+steam_db_final <- merge(steam_db_final, steam_db_table_twitch, by="name", all=TRUE)
+```
+
+Now we have are completed data table. Before we can continue, lets clean up some of this data, by converting our attributes to correct types. Lets also add a new attribute "reviewPercentage" using the "mutate" function, which will show how recommended the title is.
+
+```{r, output=FALSE, message=FALSE}
+# Lets convert rows into numeric types.
+steam_db_final <- steam_db_final %>% 
+  type_convert(col_types = 
+                 cols(appId.x = col_integer())) %>%
+  type_convert(col_types = 
+                 cols(maxConcurrentPlayers = col_integer())) %>%
+  # Lets also redo our reviewPercentage column. We want this to be indicative of how much the game is recommended (positive reviews)
+  mutate(reviewPercentage = postiveReviews/(negativeReviews+postiveReviews)) %>%
+  as_tibble()
+
+# Display our final data table.
+steam_db_final
+```
+
+
+There are two immiediate issues we notice with this resulting dataframe.
+
+* 12,000 rows
+    + While 12000 rows are great, many of these games don't even have valid appId's, due to being pulled from the Twitch table, which does not provide this information.
+* NA Values are frequent due to the Twitch table
+    + Since the twitch table also had close to 12000 rows, a majority of these entities with missing data came from here.
+* Duplicated columns
+    + We have duplicated columns for appId. We'll need to fix this.
+    
+We can keep these entities with NA values for now - but we'll go ahead and order the data such that it is in descending order from the number of positive reviews and its review percentage. We'll also go ahead and fix the duplicated columns. 
+
+```{r, output=FALSE, message=FALSE}
+steam_db_final <- steam_db_final %>%
+  arrange(desc(postiveReviews),desc(reviewPercentage), desc(maxConcurrentPlayers))  %>%
+  # make new AppId column combining appId.x and appId.y to replace any NA values.
+  mutate(AppId = coalesce(as.integer(appId.x), as.integer(appId.y))) %>%
+  select(-appId.x, -appId.y)
+
+steam_db_final
+```
+
+### Step 5: Additional Gathering of Information
+
+We want to gather additional information about video game titles on Steam now, such as price and top genres.
+
+We also want to limit our dataframe. Since we want to scrape more information, scraping information about 12000 entities could take quite a while. In this case, we'll limit ourselves to the top 500 games. Since we already ordered the data in descending order of popularity (reviewPercentage), we can simply use the "slice" function and grab rows 1-500. 
+
+
+```{r, output=FALSE, message=FALSE}
+steam_db_final_top500 <- steam_db_final %>%
+  # Take video games titles 1-500 in our dataframe. 
+  slice(1:500)
+```
+
+Since we also want to gather some additional information, we can do so with a function that we apply to each row.
+
+Lets create a new function to gather specific data we want from each video game Steamdb AND Steam page. Steamdb seems to be unreliable in its placement of same data, but Steam itself is more consistent. We can also more easily grab the price and category from Steam itself.
+
+```{r, output=FALSE, message=FALSE}
+# Define a new function, "getAdditionalInfo", with one parameter "x". We'll pass the appId in through this parameter.
+getAdditionalInfo <- function(x) {
+
+  # Get the Steamdb URL for the video game by appending the appId to the end of the base URL for Steamdb entries. 
+  app_url <- paste0("https://steamdb.info/app/", x, "/")
+
+  # Read the information we want (release date)
+  html_table <- app_url %>%
+    read_html() %>%
+    html_nodes(".timeago") %>%
+    html_attrs()
+  
+  # Slice it out of the data frame.
+  html_table <- html_table[[2]]
+  html_table <- html_table %>% as_tibble() %>% slice(4:4)
+  
+  date <- html_table[1,1]
+  
+  # Get another URL, this time the games Steam page, since Steamdb information can be unreliable.
+  # We'll also just assign the html source to a variable so we can access it multiple times.
+  html <- paste0("https://store.steampowered.com/app/", x, "/") %>%
+    read_html()
+  
+  # Lets grab the category from HTML.
+  html_table <- html %>%
+    html_nodes(".app_tag") %>%
+    html_text()
+  
+  # Some games have an age gate, we cannot access the store page without passing it, so for these games we will put NA if the category was not actually properly grabbed.
+  if(length(html_table) > 0) {
+    html_table <- html_table[[1]] %>%
+      as_tibble() %>%
+      # Remove unnecessary data from the string and clean it up (such as tabs and new lines)
+      mutate(value = str_replace_all(., "[\\r\\n\\t]+", ""))
+  } else {
+    # Assign NA if we ran into an age-gate.
+    html_table <- NA
+  }
+  
+  # Assign the category variable to "cat".
+  cat <- html_table
+  
+  # Read HTML again, this time lets grab the store page.
+  html_table <- html %>%
+    html_nodes(".game_purchase_price") %>%
+    html_text() 
+  
+  # Some games have an age gate, we cannot access the store page without passing it, so for these games we will put NA. 
+  if(length(html_table) > 0) {
+    html_table <- html_table[[1]] %>%
+      as_tibble() %>%
+      # Remove the $ symbol from the string so we can convert to double later on.
+      mutate(value = str_replace_all(., "[$]", ""))
+  } else {
+    html_table <- NA
+  }
+  
+  # Assign price of game to "price".
+  price <- html_table
+
+  # Return all in a matrix and we can extract out for each entity in the loop.
+  return(matrix(c(date,cat,price),ncol=3,byrow=TRUE))
+}
+```
+
+Now that our function is properly set up, we can now loop through the dataframe and add the 3 new attributes to each video game title entity.
+
+To do this, we'll use a for loop to loop through the rows of the dataframe.
+
+```{r, output=FALSE, message=FALSE, cache = TRUE, warning=FALSE}
+# This may take a minute to populate as we have to go to 500 URLs.
+for(i in 1:nrow(steam_db_final_top500)) {
+    # Grab the row's unique appId
+    temp_app_id <- steam_db_final_top500[i,11]
+    
+    # Get the information we want from the websites.
+    additionalInformation <- getAdditionalInfo(temp_app_id)
+    
+    # Assign the new attributes to relevant columns of the dataframe.
+    steam_db_final_top500[i, 12] <- additionalInformation[1,1]
+    steam_db_final_top500[i, 13] <- additionalInformation[1,2]
+    steam_db_final_top500[i, 14] <- additionalInformation[1,3]
+}
+```
+
+### Step 6: Clean/Tidy Data
+
+Now that the additional information is gathered, lets clean up the data we just gathered slightly (our new columns need names).
+
+```{r, output=FALSE, message=FALSE}
+steam_db_final_top500 <- steam_db_final_top500 %>%
+  mutate(releaseDate = V12) %>%
+  mutate(category = V13) %>%
+  mutate(price = V14) %>%
+  select(-V12, -V13, -V14)
+```
+
+Lastly, lets tidy the data and convert the new attributes to proper types. We'll make the releaseDate an actual date type, the category of each game a categorical variable using "factor", and the price as a double. To do this we can use the mutate function to reassign the columns to proper types.
+
+```{r, output=FALSE, message=FALSE, warning=FALSE}
+steam_db_final_top500 <- steam_db_final_top500 %>%
+  mutate(releaseDate = as.POSIXct(releaseDate,format="%Y-%m-%d")) %>%
+  mutate(category = as.factor(category)) %>%
+  mutate(price = as.double(price))
+
+# Display the final top 500 video games on Steam dataframe.
+steam_db_final_top500
+```
+
+After all the scraping, we now have a clean data set that we can use to analyze these video game titles.
+
+# Exploratory Data Analysis
+
+Now that we have a completed dataframe full of information on the top 500 video games on Steam, we can now start exploring trends and information within the data like we had initally set out to do. This is an exciting point as we can discover interesting information about the platform that may have gone unnoticed previously.
+
+We will create multiple graphs, exploring parts of the data that may lead to interesting conclusion and helpful insights.
+
+### Does release date affect the daily playtime?
+
+The first trend we can analyze is if newer games in this list get played moreso daily than older games. This is an interesting prospect - are players more likely to buy and play new games on average more so than older ones? This may give some insight into how well video games are currently doing on the PC market.
+
+To do this, we'll filter out any game before 2009, so that we only look at games from the last decade. Additionally, we'll scale the Y axis logarithmically as the numbers on this scale jump up quite drastically for some games. Overtop of all this, we'll add a linear regression line across the data to see the trend over time.
+
+Lastly, we'll also use the "ggrepel" library, which helps better organize labels/text on the graph itself. You can view more and learn about the library here: https://cran.r-project.org/web/packages/ggrepel/ggrepel.pdf [@ggrepel]
+
+```{r, output=FALSE, message=FALSE, warning = FALSE}
+# Use the ggrepel library
+library(ggrepel)
+
+# Use our top 500 dataframe.
+steam_db_final_top500 %>%
+  # Filter out titles with a release date prior to 2009.
+  filter(releaseDate >= as.POSIXct("2009-01-01 00:00:00")) %>%
+  # We'll use a ggplot with the x axis being the release date, and the y axis being the peak number of players in the last 24 hours.
+  ggplot(aes(x=releaseDate, y=`24hrPeakPlayers`)) +
+  # Scale the y axis logarithmically
+  scale_y_log10(
+    breaks = scales::trans_breaks("log10", function(x) 10^x),
+    labels = scales::trans_format("log10", scales::math_format(10^.x))
+  ) +
+  # Modify the point on the graph to be blue, along with the size dependent on the max ever amount of players at a single time.
+  geom_point(color="lightblue", aes(size=maxConcurrentPlayers)) +
+  # Linear regression line using geom_smooth
+  geom_smooth(method = lm) +
+  # Modify our labels! 
+  labs(title="Does release date affect daily playtime?",
+         x = "Release Date",
+         y = "24hr Peak Players") +
+  # Add labels to each point if the reviewPercentage is greater than 0.90.
+  geom_text(aes(label=ifelse(reviewPercentage>0.90,as.character(name),'')), size=1.5) +
+  # Remove unnecessary legends
+  theme(legend.position="none")
+```
+
+Theres two things to notice here:
+
+* The amount of titles in the top 500 has increased dramatically overtime since 2009. The distribution of titles is highly skewed to more recent years.
+
+* While there is this distribution, newer games are only slightly more active that older games, which we can see via the regression line. This is a good thing! This means newer games are generally being played a bit more than older ones, which also means news games are just as active as past ones, if not more so.
+
+We can examine this plot more closesly and only examine games with more than 3100 dailer users in the last 24 hours. 
+
+```{r, output=FALSE, message=FALSE, warning=FALSE}
+steam_db_final_top500 %>%
+  filter(releaseDate >= as.POSIXct("2009-01-01 00:00:00")) %>%
+  filter(`24hrPeakPlayers` >= 10^(3.5)) %>%
+  ggplot(aes(x=releaseDate, y=`24hrPeakPlayers`)) +
+  scale_y_log10(
+    breaks = scales::trans_breaks("log10", function(x) 10^x),
+    labels = scales::trans_format("log10", scales::math_format(10^.x))
+  ) +
+  geom_point(color="lightblue", aes(size=maxConcurrentPlayers)) +
+  geom_smooth(method = lm) +
+  labs(title="Does release date affect daily playtime? (w/ daily playtime over 3100 users)",
+         x = "Release Date",
+         y = "24hr Peak Players") +
+  # This here labels the top three points on the graph, rather than all (which could get messy)
+  geom_text(aes(label=ifelse(name=='Dota 2', "Dota 2", "")), col="black",hjust=0, nudge_x = 0.05) +
+  geom_text_repel(aes(label=ifelse(name=='PLAYERUNKNOWN\'S BATTLEGROUNDS', "PLAYERUNKNOWN\'S BATTLEGROUNDS", "")), col="black",hjust=0, nudge_x = 0.05, size = 3) +
+  geom_text_repel(aes(label=ifelse(name=='Counter-Strike: Global Offensive', "Counter-Strike: Global Offensive", "")), col="black",hjust=0, nudge_x = 0.05, size = 3) +
+  theme(legend.position="none")
+```
+
+Interestingly enough, daily playtime is slightly higher for older games when looking this subset of higher numbers of users.
+
+### Most Popular User-Defined Tags Among Top 500 Games
+
+Next, we can also examine the most popular defined tags. This is extremely useful to developers as it's indicative of what the most popular games are generally defined as on Steam.
+
+The category attribute has an NA row, so we'll remove NA values from the graph for this analysis as they aren't exactly useful here.
+
+```{r, output=FALSE, message=FALSE, warning=FALSE}
+steam_db_final_top500 %>%
+  # Group by the category attribute
+  group_by(category) %>% 
+  # And tge the frequency of each category within the dataframe. This will output to a new column, 'n'.
+  tally() %>%
+  # Grab the subset of data that does not have any NA values.
+  subset(category!="NA") %>%
+  # We'll also reorder the data in a descending order across the X axis by the y value.
+  ggplot(aes(x=reorder(category, -n), y=n)) +
+  geom_bar(color="lightblue", , stat = "identity") +
+  # We use the ggrepel library each to offset the text labels for each bar graph in the top 10.
+  geom_text_repel(aes(label=ifelse(n>=10,as.character(category),'')), size = 3, nudge_x = 10, segment.alpha = 0.2) +
+  # Adjust the theme. This is useful as we can rotate the x axis labels.
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=5)) +  
+  labs(title="Most Popular User-Defined Tags Among Top 500 Games",
+         x = "Genre/Category",
+         y = "Frequency")
+```
+
+Interestingly enough, many of these popular games seem to be free! However we can also see some other interesting data - "Gore" is listed as top user-defined tag here, indicating violent games are pretty popular. Right behind that is Action, RPG, and Open World, which aren't necessarily suprising in any case.
+
+### Price of Popular Games Over the Last Decade
+
+The next trend we want to investigate is an interesting one. Have popular games prices increased over the last decade? 
+
+This is something we want to know - in this ever increasing market, there is believed to be a rush to the bottom of the barrel for pricing of indepdent video games (self-published, smaller scale games) [@mikerose2018]. 
+
+But should developers actually be doing this?
+
+```{r, output=FALSE, message=FALSE, warning=FALSE}
+
+# Get the mean price, round to only the first two digits. Exclude NA values.
+mean_price <- round(mean(steam_db_final_top500$price, na.rm=TRUE), digits = 2)
+# Use the sd function to get the standard deviation of the price.
+std_price <- round(sd(steam_db_final_top500$price, na.rm = TRUE), digits = 2)
+
+steam_db_final_top500 %>%
+  filter(releaseDate >= as.POSIXct("2009-01-01 00:00:00")) %>%
+  ggplot(aes(x=releaseDate, y=price)) +
+  # Scale the y axis so that it is breaks of 5. 
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 5)) +
+  geom_point(color="lightblue", aes(size=maxConcurrentPlayers)) +
+  # Add a black line indicative of the mean price.
+  geom_hline(yintercept = mean_price) +
+  # And add dotted lines for one standard deviation above and below the mean.
+  geom_hline(yintercept = mean_price - std_price, linetype="dotted") +
+  geom_hline(yintercept = mean_price + std_price, linetype="dotted") +
+  geom_smooth(method = lm) +
+  labs(title="Price of Popular Games Over the Last Decade",
+         x = "Release Date",
+         y = "Price") +
+  geom_text_repel(aes(label=ifelse(price>=60,as.character(name),'')), size = 3, nudge_x = 10, segment.alpha = 0.2) +
+  theme(legend.position="none")
+```
+
+This graph shows us that game prices have increased over the last decade for popular titles. Thus, despite the ever decreasing price in indepdent games on Steam that we all know of, popular titles prices have continued to increase. 
+
+Additionally, we can see the mean price for popular games is currently $`r mean_price`, along with a standard deviation of $`r std_price`, which means developers should be pricing their games accordingly. (the black line and dotted lines indicate these values)
+
+### Distribution of Highly Rated Games per Year
+
+Next, we want to examine the trend of the number of releases over the years. Is it true that there has been an influx of games on Steam over the years? This should obviously be yes, but we should check.
+
+```{r, output=FALSE, message=FALSE, warning=FALSE}
+steam_db_final_top500 %>%
+  # Filter the dates between 1999 and 2019 (exclude 2019 as its still in progress)
+  filter(releaseDate >= as.POSIXct("1999-01-01 00:00:00")) %>%
+  filter(releaseDate <= as.POSIXct("2019-01-01 00:00:00")) %>%
+  # Factor by year.
+  ggplot(aes(x=factor(format(releaseDate, format="%Y")))) +
+  geom_bar(color="lightblue") +
+  labs(title="Number of Game Releases Per Year",
+         x = "Release Year",
+         y = "Number of Popular Releases") +
+  theme(legend.position="none")
+```
+
+Okay... so the number of popular games releases have definietly exploded over the last decade at the very least! 
+
+### Distribution of Game Releases Per Month
+
+One of the last aspects we should examine that is important to developers is when to release their game. Since Steam has such a huge volume of games releasing every year, choosing the correct month is vital to surviving other competition. 
+
+We can look at the distribution of games releases for each month and see if any month has a low distribution of g
+
+```{r, output=FALSE, message=FALSE, warning=FALSE}
+steam_db_final_top500 %>%
+  filter(releaseDate >= as.POSIXct("2018-01-01 00:00:00")) %>%
+  ggplot(aes(x=factor(format(releaseDate, format="%m")))) +
+  geom_bar(color="lightblue") +
+  labs(title="Number of Game Releases Per Month For Past Year",
+         x = "Release Month",
+         y = "Number of Popular Releases") +
+  theme(legend.position="none")
+```
+
+With this data, it clearly shows that the lowest number of releases happens in July. For developers - this could mean that releasing in July could bring forth less competition and better revenue, or it could mean that there is some other (unknown) factor that developers steer clear of from releasing in there.
+
+# End Notes and Limitations
+
+Overall, this data is incredibly valuable to video game developers as it shows trends in the current market - something that can be valuable to help maximize revenue and the succesful release of their video games.
+
+However, this does come with limitations and important notes that should be taken into account.
+
+With such a dataset, we only have access to current video game titles. While this is helpful, it does not necessarily display innovation, which can only be found by exploring new avenues. These trends can certainly help lead to such innovation though.
+
+We also don't have accurate revenue statistics. We can try to estimate it ourselves, but doing so would most likely to lead to values that are inaccurate. Since Steam does not release such data pubicly, and the other fact that games get sold in bundles and discounts frequently, even with an accurate number of players revenue would still be hard to estimate. Again, we were able to find the average price of a popular game is $`r mean_price` though.
+
+Using this tutorial, one could continue the explorating and analysis of these titles. Instead of scraping only the top 500 video game titles, you could (with a lengthy amount of time) scrape the entire 12,000 video game titles we have in the "steam_db_final" data frame. This may give additional information into the status of the PC video game industry on Steam.
 
 # References
