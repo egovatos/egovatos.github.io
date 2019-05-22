@@ -441,7 +441,7 @@ We will create multiple graphs, exploring parts of the data that may lead to int
 
 The first trend we can analyze is if newer games in this list get played moreso daily than older games. This is an interesting prospect - are players more likely to buy and play new games on average more so than older ones? This may give some insight into how well video games are currently doing on the PC market.
 
-To do this, we'll filter out any game before 2009, so that we only look at games from the last decade. Additionally, we'll scale the Y axis logarithmically as the numbers on this scale jump up quite drastically for some games. Overtop of all this, we'll add a linear regression line across the data to see the trend over time.
+To do this, we'll filter out any game before 2009, so that we only look at games from the last decade. Additionally, we'll scale the Y axis logarithmically as the numbers on this scale jump up quite drastically for some games. Overtop of all this, we'll add a linear regression line (a linear model) across the data to see the trend over time.
 
 Lastly, we'll also use the "ggrepel" library, which helps better organize labels/text on the graph itself. You can view more and learn about the library here: https://cran.r-project.org/web/packages/ggrepel/ggrepel.pdf [@ggrepel]
 
@@ -533,11 +533,39 @@ steam_db_final_top500 %>%
 
 Interestingly enough, many of these popular games seem to be free! However we can also see some other interesting data - "Gore" is listed as top user-defined tag here, indicating violent games are pretty popular. Right behind that is Action, RPG, and Open World, which aren't necessarily suprising in any case.
 
+Similar to this analysis, we can do another - which genre's have had the total most amount of concurrent players? This may make more sense to look at, as this will show which genre's players are spending most of their time, rather than just which genres are most frequent.
+
+```{r, output=FALSE, message=FALSE, warning=FALSE}
+steam_db_final_top500 %>%
+  # Group by the category attribute
+  group_by(category) %>% 
+  # Summarize maxConcurrentPlayers via category.
+  summarise(maxConcurrentPlayers = sum(maxConcurrentPlayers)) %>%
+  # Grab the subset of data that does not have any NA values.
+  subset(category!="NA") %>%
+  # We'll also reorder the data in a descending order across the X axis by the y value.
+  ggplot(aes(x=reorder(category,-maxConcurrentPlayers), y=maxConcurrentPlayers)) +
+  geom_bar(color="lightblue", , stat = "identity") +
+  # Scale the y axis as normal values, rather than scientific
+  scale_y_continuous(labels = scales::comma) +
+  # We use the ggrepel library each to offset the text labels for each bar graph in the top 10.
+  geom_text_repel(aes(label=ifelse(maxConcurrentPlayers>=10^5.5,as.character(category),'')), size = 3, nudge_x = 10, segment.alpha = 0.2) +
+  # Adjust the theme. This is useful as we can rotate the x axis labels.
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=5)) +  
+  labs(title="Most Popular Genres by Player Count",
+         x = "Genre/Category",
+         y = "Total of Maximum Concurrent Players")
+```
+
+This is especially useful information as it shows which genre's players are most interested in. If developers want to increase their player counts, perhaps looking into making their game applicable to one of these genres would be smart.
+
 ### Price of Popular Games Over the Last Decade
 
 The next trend we want to investigate is an interesting one. Have popular games prices increased over the last decade? 
 
 This is something we want to know - in this ever increasing market, there is believed to be a rush to the bottom of the barrel for pricing of indepdent video games (self-published, smaller scale games) [@mikerose2018]. 
+
+We'll add a linear model across the graph again to help show how the price has trended over the last decade. We'll also add three horizontal lines - a solid black one to show the mean, and two dotted lines to show one standard deviation away from the mean.
 
 But should developers actually be doing this?
 
