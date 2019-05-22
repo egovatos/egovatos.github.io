@@ -478,9 +478,9 @@ Theres two things to notice here:
 
 * The amount of titles in the top 500 has increased dramatically overtime since 2009. The distribution of titles is highly skewed to more recent years.
 
-* While there is this distribution, newer games are only slightly more active that older games, which we can see via the regression line. This is a good thing! This means newer games are generally being played a bit more than older ones, which also means news games are just as active as past ones, if not more so.
+* While there is this distribution, newer games are only slightly more active then that of older games, which we can see via the regression line. This is a good thing! This means newer games are generally being played a bit more than older ones, which also means news games are just as active as past ones, if not more so.
 
-We can examine this plot more closesly and only examine games with more than 3100 dailer users in the last 24 hours. 
+We can examine this plot more closesly and only examine games with more than 3100 daily users in the last 24 hours. 
 
 ```{r, output=FALSE, message=FALSE, warning=FALSE}
 steam_db_final_top500 %>%
