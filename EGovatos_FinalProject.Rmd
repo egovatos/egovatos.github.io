@@ -593,7 +593,7 @@ Okay... so the number of popular games releases have definietly exploded over th
 
 One of the last aspects we should examine that is important to developers is when to release their game. Since Steam has such a huge volume of games releasing every year, choosing the correct month is vital to surviving other competition. 
 
-We can look at the distribution of games releases for each month and see if any month has a low distribution of g
+We can look at the distribution of games releases for each month and see if any month stands out in particular as a good release month.
 
 ```{r, output=FALSE, message=FALSE, warning=FALSE}
 steam_db_final_top500 %>%

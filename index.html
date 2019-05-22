@@ -1708,20 +1708,20 @@ steam_db_table_graph &lt;- steam_db_table_graph %&gt;%
 
 # Output dataframe for Step 1.
 steam_db_table_graph</code></pre>
-<pre><code>## # A tibble: 1,408 x 5
+<pre><code>## # A tibble: 1,401 x 5
 ##    appId  name            currentPlayers `24hrPeakPlayer… maxConcurrentPla…
 ##    &lt;chr&gt;  &lt;chr&gt;           &lt;chr&gt;          &lt;chr&gt;            &lt;chr&gt;            
-##  1 570    Dota 2          302,591        847,257          1,295,114        
-##  2 730    Counter-Strike… 219,301        507,507          854,801          
-##  3 359550 Tom Clancy's R… 47,623         94,894           178,953          
-##  4 440    Team Fortress 2 36,869         45,354           122,938          
-##  5 252950 Rocket League   34,582         56,416           103,129          
-##  6 271590 Grand Theft Au… 32,284         79,074           364,548          
-##  7 230410 Warframe        30,335         53,170           132,201          
-##  8 252490 Rust            27,042         39,703           85,218           
-##  9 629760 MORDHAU         26,223         34,524           60,204           
-## 10 346110 ARK: Survival … 25,473         39,023           106,478          
-## # … with 1,398 more rows</code></pre>
+##  1 570    Dota 2          308,289        847,257          1,295,114        
+##  2 730    Counter-Strike… 218,917        507,507          854,801          
+##  3 359550 Tom Clancy's R… 47,344         94,894           178,953          
+##  4 440    Team Fortress 2 36,730         45,354           122,938          
+##  5 252950 Rocket League   34,521         56,416           103,129          
+##  6 271590 Grand Theft Au… 32,459         79,074           364,548          
+##  7 230410 Warframe        30,557         53,170           132,201          
+##  8 252490 Rust            26,865         39,703           85,218           
+##  9 629760 MORDHAU         26,436         34,524           60,204           
+## 10 346110 ARK: Survival … 25,304         39,023           106,478          
+## # … with 1,391 more rows</code></pre>
 <p>Great! Now we have a completed dataframe of the videogames with the top concurrent players. Each row displays a videogame, along with the relevant attributes, such as appId, the current amount of players, peak number if players in the last 24 hours, and the max ever amount of concurrent players.</p>
 </div>
 <div id="step-2-twitch-players-table" class="section level3">
@@ -1784,16 +1784,16 @@ steam_db_table_twitch</code></pre>
 <pre><code>## # A tibble: 11,723 x 4
 ##    name                 currentViewers `24hrPeakViewer… twitchSteamPlayers…
 ##    &lt;chr&gt;                &lt;chr&gt;          &lt;chr&gt;            &lt;chr&gt;              
-##  1 Counter-Strike       384            583              5,510              
-##  2 Team Fortress Class… 0              11               76                 
-##  3 Day of Defeat        0              1                112                
+##  1 Counter-Strike       368            583              5,438              
+##  2 Team Fortress Class… 0              11               74                 
+##  3 Day of Defeat        0              1                106                
 ##  4 Deathmatch Classic   0              2                3                  
-##  5 Half-Life: Opposing… 0              136              47                 
+##  5 Half-Life: Opposing… 0              136              45                 
 ##  6 Ricochet             0              1                6                  
-##  7 Half-Life            70             70               275                
-##  8 Counter-Strike: Con… 0              4                338                
-##  9 Half-Life: Blue Shi… 0              5                20                 
-## 10 Half-Life 2          5              43               394                
+##  7 Half-Life            60             70               279                
+##  8 Counter-Strike: Con… 0              4                344                
+##  9 Half-Life: Blue Shi… 0              5                18                 
+## 10 Half-Life 2          0              43               403                
 ## # … with 11,713 more rows</code></pre>
 <p>Before we move forward, there is something very important to notice with this data set already. Compared to the two other tables we create (concurrent players and reviews), this data frame has close to 12,000 entities, while the other two contain far less (concurrent players is roughly 1200, and reviews is only 138). We will modify the completed dataframe further on.</p>
 </div>
@@ -1898,12 +1898,12 @@ steam_db_final &lt;- steam_db_final %&gt;%
 
 # Display our final data table.
 steam_db_final</code></pre>
-<pre><code>## # A tibble: 12,147 x 12
+<pre><code>## # A tibble: 12,144 x 12
 ##    name  appId.x currentPlayers `24hrPeakPlayer… maxConcurrentPl… appId.y
 ##    &lt;chr&gt;   &lt;int&gt;          &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;   &lt;dbl&gt;
 ##  1 ::Ca…      NA             NA               NA               NA      NA
 ##  2 !4RC…      NA             NA               NA               NA      NA
-##  3 .hac…  525480             72               80             1989      NA
+##  3 .hac…  525480             69               80             1989      NA
 ##  4 .pro…      NA             NA               NA               NA      NA
 ##  5 '90s…      NA             NA               NA               NA      NA
 ##  6 'n V…      NA             NA               NA               NA      NA
@@ -1911,7 +1911,7 @@ steam_db_final</code></pre>
 ##  8 #kil…      NA             NA               NA               NA      NA
 ##  9 #mon…  614910            110              125              189      NA
 ## 10 #Sel…      NA             NA               NA               NA      NA
-## # … with 12,137 more rows, and 6 more variables: postiveReviews &lt;dbl&gt;,
+## # … with 12,134 more rows, and 6 more variables: postiveReviews &lt;dbl&gt;,
 ## #   negativeReviews &lt;dbl&gt;, reviewPercentage &lt;dbl&gt;, currentViewers &lt;dbl&gt;,
 ## #   `24hrPeakViewers` &lt;dbl&gt;, twitchSteamPlayers24hr &lt;dbl&gt;</code></pre>
 <p>There are two immiediate issues we notice with this resulting dataframe.</p>
@@ -1937,20 +1937,20 @@ steam_db_final</code></pre>
   select(-appId.x, -appId.y)
 
 steam_db_final</code></pre>
-<pre><code>## # A tibble: 12,147 x 11
+<pre><code>## # A tibble: 12,144 x 11
 ##    name  currentPlayers `24hrPeakPlayer… maxConcurrentPl… postiveReviews
 ##    &lt;chr&gt;          &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;          &lt;dbl&gt;
-##  1 Team…          36869            45354           122938         517378
-##  2 Garr…          17938            32754            73863         365226
-##  3 Terr…          19368            21226           159175         257221
-##  4 Left…           7572            16086           162399         253110
-##  5 The …           7768            11877           287411         237463
-##  6 The …           6193            12289            92268         204306
-##  7 Euro…           7349            25578            48356         177911
-##  8 Port…           1419             1821            98460         138684
-##  9 Sid …          19557            24565            91363         129192
-## 10 Coun…           5510            14334           319586         124935
-## # … with 12,137 more rows, and 6 more variables: negativeReviews &lt;dbl&gt;,
+##  1 Team…          36730            45354           122938         517378
+##  2 Garr…          17612            32754            73863         365226
+##  3 Terr…          19143            21226           159175         257221
+##  4 Left…           7586            16086           162399         253110
+##  5 The …           7760            11877           287411         237463
+##  6 The …           6195            12289            92268         204306
+##  7 Euro…           7238            25578            48356         177911
+##  8 Port…           1417             1821            98460         138684
+##  9 Sid …          19579            24565            91363         129192
+## 10 Coun…           5438            14334           319586         124935
+## # … with 12,134 more rows, and 6 more variables: negativeReviews &lt;dbl&gt;,
 ## #   reviewPercentage &lt;dbl&gt;, currentViewers &lt;dbl&gt;, `24hrPeakViewers` &lt;dbl&gt;,
 ## #   twitchSteamPlayers24hr &lt;dbl&gt;, AppId &lt;int&gt;</code></pre>
 </div>
@@ -2216,7 +2216,7 @@ steam_db_final_top500 %&gt;%
 <div id="distribution-of-game-releases-per-month" class="section level3">
 <h3>Distribution of Game Releases Per Month</h3>
 <p>One of the last aspects we should examine that is important to developers is when to release their game. Since Steam has such a huge volume of games releasing every year, choosing the correct month is vital to surviving other competition.</p>
-<p>We can look at the distribution of games releases for each month and see if any month has a low distribution of g</p>
+<p>We can look at the distribution of games releases for each month and see if any month stands out in particular as a good release month.</p>
 <pre class="r"><code>steam_db_final_top500 %&gt;%
   filter(releaseDate &gt;= as.POSIXct(&quot;2018-01-01 00:00:00&quot;)) %&gt;%
   ggplot(aes(x=factor(format(releaseDate, format=&quot;%m&quot;)))) +
