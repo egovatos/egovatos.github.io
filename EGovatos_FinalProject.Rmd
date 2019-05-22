@@ -18,7 +18,9 @@ In this tutorial, we will investigate trends in the ever competing market that i
 
 We will go over what Steam is, why it is important, useful websites we can use to gather data from Steam itself, and how we can use the data to investigate trends and find what sort of games developers should be developing to help increase their revenue in an increasingly competitive market. 
 
-For this tutorial, we will use the R programming language. All code is provided to help you build the same data set.
+For this tutorial, we will use the R programming language. All code is provided to help you build the same data set. 
+
+The source code for this project can be downloaded on its GitHub repository: https://github.com/egovatos/egovatos.github.io
 
 ### What is Steam?
 
@@ -608,9 +610,15 @@ steam_db_final_top500 %>%
 
 With this data, it clearly shows that the lowest number of releases happens in July. For developers - this could mean that releasing in July could bring forth less competition and better revenue, or it could mean that there is some other (unknown) factor that developers steer clear of from releasing in there.
 
-# End Notes and Limitations
+# Conclusion
+
+### What have we learned?
 
 Overall, this data is incredibly valuable to video game developers as it shows trends in the current market - something that can be valuable to help maximize revenue and the succesful release of their video games.
+
+We've learned how to scrape data from Steamdb and Steam itself, along with parsing and cleaning the data we scrape. Furthermore, we learned how to use this data to explore trends among the data, as well as add in linear models to help model the data we have.
+
+### Limitations
 
 However, this does come with limitations and important notes that should be taken into account.
 
@@ -618,6 +626,8 @@ With such a dataset, we only have access to current video game titles. While thi
 
 We also don't have accurate revenue statistics. We can try to estimate it ourselves, but doing so would most likely to lead to values that are inaccurate. Since Steam does not release such data pubicly, and the other fact that games get sold in bundles and discounts frequently, even with an accurate number of players revenue would still be hard to estimate. Again, we were able to find the average price of a popular game is $`r mean_price` though.
 
-Using this tutorial, one could continue the explorating and analysis of these titles. Instead of scraping only the top 500 video game titles, you could (with a lengthy amount of time) scrape the entire 12,000 video game titles we have in the "steam_db_final" data frame. This may give additional information into the status of the PC video game industry on Steam.
+### Moving Forward
+
+Using this tutorial, one could continue the explorating and analysis of these titles. Instead of scraping only the top 500 video game titles, you could (with a lengthy amount of time) scrape the entire 12,000 video game titles we have in the "steam_db_final" data frame. This may give additional insights into the status of the PC video game industry on Steam via further analysis.
 
 # References
